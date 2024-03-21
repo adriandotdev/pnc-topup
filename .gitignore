@@ -1,0 +1,4 @@
+/node_modules
+/logs/nspocpi
+/package-lock.json
+.env
