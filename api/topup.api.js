@@ -2,15 +2,17 @@ const TokenMiddleware = require("../middlewares/TokenMiddleware"); // Remove thi
 const { validationResult, body } = require("express-validator");
 
 const logger = require("../config/winston");
-const TokenMiddleware = require("../middlewares/TokenMiddleware");
 
 // Import your SERVICE HERE
 // Import MISC HERE
+
+const TopupService = require("../services/TopupService");
 
 /**
  * @param {import('express').Express} app
  */
 module.exports = (app) => {
+	const service = new TopupService();
 	const tokenMiddleware = new TokenMiddleware();
 	/**
 	 * This function will be used by the express-validator for input validation,
@@ -29,8 +31,8 @@ module.exports = (app) => {
 		}
 	}
 
-	app.get(
-		"/topup/payments/topup",
+	app.post(
+		"/topup/api/v1/payments/topup",
 		[tokenMiddleware.AccessTokenVerifier()],
 
 		/**
@@ -53,6 +55,12 @@ module.exports = (app) => {
 				});
 
 				/** Your logic here */
+				const result = await service.Topup({
+					user_id: req.id,
+					topup_type,
+					amount,
+				});
+
 				logger.info({
 					TOPUP_API_RESPONSE: {
 						message: "SUCCESS",
@@ -61,7 +69,7 @@ module.exports = (app) => {
 
 				return res
 					.status(200)
-					.json({ status: 200, data: [], message: "Success" });
+					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
 				logger.error({
 					TOPUP_API_ERROR: {
