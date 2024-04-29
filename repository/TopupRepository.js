@@ -33,6 +33,7 @@ module.exports = class TopupRepository {
             SET 
                 payment_status = ?,
                 transaction_id = ?,
+				description = ?,
                 date_modified = NOW()
             WHERE id = ?
         `;
@@ -40,7 +41,7 @@ module.exports = class TopupRepository {
 		return new Promise((resolve, reject) => {
 			mysql.query(
 				QUERY,
-				[data.status, data.transaction_id, data.topup_id],
+				[data.status, data.transaction_id, data.description, data.topup_id],
 				(err, result) => {
 					if (err) {
 						console.log(err);
@@ -67,6 +68,8 @@ module.exports = class TopupRepository {
 				if (err) {
 					reject(err);
 				}
+
+				resolve(result);
 			});
 		});
 	}

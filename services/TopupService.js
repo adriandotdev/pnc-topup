@@ -6,6 +6,7 @@ const {
 } = require("../utils/HttpError");
 const axios = require("axios");
 const logger = require("../config/winston");
+
 module.exports = class TopupService {
 	#repository;
 
@@ -42,6 +43,11 @@ module.exports = class TopupService {
     }
      */
 	async #RequestAuthmodule() {
+		logger.info({
+			method: "RequestAuthmodule",
+			class: "TopupService",
+		});
+
 		const result = await axios.post(
 			process.env.AUTHMODULE_URL,
 			{
@@ -60,6 +66,17 @@ module.exports = class TopupService {
 	}
 
 	async #RequestToGCashSourceURL({ auth_token, user_id, amount, topup_id }) {
+		logger.info({
+			data: {
+				auth_token,
+				user_id,
+				amount,
+				topup_id,
+			},
+			method: "RequestToGCashSourceURL",
+			class: "TopupService",
+		});
+
 		const result = await axios.post(
 			process.env.GCASH_SOURCE_URL,
 			{
@@ -109,11 +126,11 @@ module.exports = class TopupService {
 			logger.info({
 				AUTHMODULE_API_ERROR: {
 					message: "Bad Request",
-					status: 400,
+					status: authmoduleData.status,
 				},
 			});
 
-			return "BAD_REQUEST";
+			throw new HttpBadRequest("BAD_REQUEST", []);
 		} else if (authmoduleData.status >= 500 && authmoduleData.status < 600) {
 			logger.info({
 				AUTHMODULE_API_ERROR: {
@@ -122,7 +139,7 @@ module.exports = class TopupService {
 				},
 			});
 
-			return "INTERNAL_SERVER_ERROR";
+			throw new HttpInternalServerError("INTERNAL_SERVER_ERROR", []);
 		}
 
 		if (amount < 100)
@@ -144,11 +161,16 @@ module.exports = class TopupService {
 
 		if (status === "SUCCESS") {
 			logger.info({
-				auth_token: authmoduleData.data.access_token,
-				user_id,
-				amount,
-				topup_id,
+				data: {
+					auth_token: authmoduleData.data.access_token,
+					user_id,
+					amount,
+					topup_id,
+				},
+				method: "Topup",
+				class: "TopupService",
 			});
+
 			const result = await this.#RequestToGCashSourceURL({
 				auth_token: authmoduleData.data.access_token,
 				user_id,
