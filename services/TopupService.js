@@ -14,34 +14,6 @@ module.exports = class TopupService {
 		this.#repository = new TopupRepository();
 	}
 
-	/**
-     * global.token = function(){
-        return new Promise((resolve,reject)=>{
-            //fetch api authmodule, for marv's api auth
-            let url = config.authmodule.url;
-            let options = {
-            method: 'POST',
-            headers: {
-                'Accept':'application/json',
-                'Authorization':config.authmodule.authorization,
-                'Content-Type':'application/json'
-            },
-                body: JSON.stringify({grant_type: config.authmodule.grantType})
-            };
-
-            winston.info({GET_AUTHMODULE_REQUEST:options});
-            fetch(url, options)
-            .then(res => res.json())
-            .then((result)=>{
-                winston.info({GET_AUTHMODULE_RESPONSE:result});
-                resolve(result);
-            })
-            .catch((err)=>{
-                reject(err);
-            });     
-        });
-    }
-     */
 	async #RequestAuthmodule() {
 		logger.info({
 			method: "RequestAuthmodule",
@@ -96,6 +68,29 @@ module.exports = class TopupService {
 		);
 
 		return { status: result.status, data: result.data.result.data };
+	}
+
+	async #RequestToGCashPaymentURL({ amount, description, id, token }) {
+		const result = await axios.post(
+			process.env.GCASH_PAYMENT_URL,
+			{
+				amount,
+				description,
+				currency: "PHP",
+				statement_descriptor: "ParkNcharge",
+				id,
+				type: "source",
+			},
+			{
+				headers: {
+					Accept: "application/json",
+					Authorization: "Bearer " + token,
+					"Content-Type": "application/json",
+				},
+			}
+		);
+
+		return result.data;
 	}
 
 	async Topup({ user_id, topup_type, amount }) {
@@ -184,9 +179,104 @@ module.exports = class TopupService {
 
 			await this.#repository.UpdateTopup({ status, transaction_id, topup_id });
 
-			return { status: 200, checkout_url };
+			return { checkout_url };
 		} else {
 			throw new HttpInternalServerError(status, []);
 		}
+	}
+
+	async Payment({
+		user_type,
+		token,
+		user_id,
+		topup_id,
+		transaction_id,
+		payment_token_valid,
+	}) {
+		logger.info({
+			PAYMENT_METHOD: {
+				class: "TopupService",
+			},
+		});
+
+		function cleanAmountForTopup(amount) {
+			amount = amount.replace(" ", "");
+			amount = amount.replace(".", "");
+			amount = amount.replace(",", "");
+			amount = amount.replace(/ /g, "");
+			amount = amount.replace(/[^A-Za-z0-9\-]/, "");
+			return amount;
+		}
+
+		let status = token.substring(token.length - 1);
+		let parsedToken = token.substring(0, token.length - 2);
+
+		if (status === "0") {
+			logger.info({
+				TOPUP_FAILED: {
+					status,
+					class: "TopupService",
+				},
+			});
+
+			if (user_type === "tenant") {
+				logger.info({
+					TENANT: {
+						message: "SUCCESS",
+					},
+				});
+
+				await this.#repository.UpdateTopup({
+					status: "failed",
+					transaction_id,
+					topup_id,
+				});
+			} else {
+				// if guest
+			}
+
+			logger.info({
+				TOPUP_FAILED_EXIT: {
+					message: "SUCCESS",
+				},
+			});
+			return "TOPUP_FAILED";
+		}
+
+		if (payment_token_valid) {
+			let details =
+				user_type === "tenant" &&
+				(await this.#repository.GetUserTopupDetails(topup_id));
+
+			if (details[0]?.payment_status === "pending") {
+				const description = uuidv4();
+				console.log(
+					details[0].amount,
+					cleanAmountForTopup(String(details[0].amount))
+				);
+
+				const result = await this.#RequestToGCashPaymentURL({
+					amount: cleanAmountForTopup(String(details[0].amount)),
+					description,
+					id: details[0].transaction_id,
+					token: parsedToken,
+				});
+
+				if (user_type === "tenant") {
+					await this.#repository.UpdateTopup({
+						status: result.data.attributes.status,
+						transaction_id: details[0].transaction_id,
+						description: description,
+						topup_id,
+					});
+				} else {
+					// FOR GUEST
+				}
+
+				if (result.data.attributes.status === "paid") return "SUCCESS";
+			} else if (details[0]?.payment_status === "paid") return "ALREADY_PAID";
+		}
+
+		return "FAILED";
 	}
 };
