@@ -298,7 +298,7 @@ module.exports = class TopupService {
 		token,
 		user_id,
 		topup_id,
-		transaction_id,
+		// transaction_id,
 		payment_token_valid,
 	}) {
 		logger.info({
