@@ -90,7 +90,7 @@ module.exports = (app) => {
 		"/topup/api/v1/payments/:user_type/gcash/:token/:topup_id/:transaction_id",
 		[
 			tokenMiddleware.AccessTokenVerifier(),
-			tokenMiddleware.AuthenticatePaymentToken(),
+			tokenMiddleware.AuthenticateGCashPaymentToken(),
 		],
 		/**
 		 * @param {import('express').Request} req
@@ -101,7 +101,7 @@ module.exports = (app) => {
 				const { user_type, token, topup_id, transaction_id } = req.params;
 
 				logger.info({
-					PAYMENT_API_REQUEST: {
+					GCASH_PAYMENT_API_REQUEST: {
 						data: {
 							...req.params,
 						},
@@ -109,7 +109,7 @@ module.exports = (app) => {
 					},
 				});
 
-				const result = await service.Payment({
+				const result = await service.GCashPayment({
 					user_type,
 					token,
 					user_id: req.id,
@@ -119,7 +119,7 @@ module.exports = (app) => {
 				});
 
 				logger.info({
-					PAYMENT_API_RESPONSE: {
+					GCASH_PAYMENT_API_RESPONSE: {
 						message: "SUCCESS",
 					},
 				});
@@ -128,7 +128,58 @@ module.exports = (app) => {
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
 				logger.error({
-					PAYMENT_API_ERROR: {
+					GCASH_PAYMENT_API_ERROR: {
+						err,
+						message: err.message,
+					},
+				});
+				return res.status(err.status || 500).json({
+					status: err.status || 500,
+					data: err.data || [],
+					message: err.message || "Internal Server Error",
+				});
+			}
+		}
+	);
+
+	app.get(
+		"/topup/api/v1/payments/:user_type/maya/:token/:transaction_id",
+		[tokenMiddleware.AuthenticateMayaPaymentToken()],
+		/**
+		 * @param {import('express').Request} req
+		 * @param {import('express').Response} res
+		 */
+		async (req, res) => {
+			try {
+				const { user_type, token, transaction_id } = req.params;
+				logger.info({
+					MAYA_PAYMENT_API_REQUEST: {
+						data: {
+							...req.params,
+						},
+						message: "SUCCESS",
+					},
+				});
+
+				const result = await service.MayaPayment({
+					user_type,
+					token,
+					transaction_id,
+					payment_token_valid: req.payment_token_valid,
+				});
+
+				logger.info({
+					MAYA_PAYMENT_API_RESPONSE: {
+						message: "SUCCESS",
+					},
+				});
+
+				return res
+					.status(200)
+					.json({ status: 200, data: result, message: "Success" });
+			} catch (err) {
+				logger.error({
+					MAYA_PAYMENT_API_ERROR: {
 						err,
 						message: err.message,
 					},

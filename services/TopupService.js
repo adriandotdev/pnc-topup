@@ -70,6 +70,31 @@ module.exports = class TopupService {
 		return { status: result.status, data: result.data.result.data };
 	}
 
+	async #RequestToMayaSourceURL({ auth_token, user_id, description, amount }) {
+		const result = await axios.post(
+			process.env.MAYA_PAYMENT_URL,
+			{
+				user_id,
+				type: "paymaya",
+				description,
+				amount,
+				payment_method_allowed: "paymaya",
+				statement_descriptor: "ParkNcharge",
+				user_type: "tenant",
+				pnc_type: "pnc",
+			},
+			{
+				headers: {
+					Accept: "application/json",
+					Authorization: "Bearer " + auth_token,
+					"Content-Type": "application/json",
+				},
+			}
+		);
+
+		return result.data;
+	}
+
 	async #RequestToGCashPaymentURL({ amount, description, id, token }) {
 		const result = await axios.post(
 			process.env.GCASH_PAYMENT_URL,
@@ -93,6 +118,35 @@ module.exports = class TopupService {
 		return result.data;
 	}
 
+	async #RequestToMayaPaymentURL({ token, transaction_id, client_key }) {
+		const result = await axios.post(
+			process.env.MAYA_GET_PAYMENT_URL,
+			{
+				payment_intent: transaction_id,
+				client_key,
+			},
+			{
+				headers: {
+					Accept: "application/json",
+					Authorization: "Bearer " + token,
+					"Content-Type": "application/json",
+				},
+			}
+		);
+
+		const status = result.data.data.attributes.status;
+
+		if (status === "processing") {
+			return await this.#RequestToMayaPaymentURL({
+				token,
+				transaction_id,
+				client_key,
+			});
+		}
+
+		return status;
+	}
+
 	async Topup({ user_id, topup_type, amount }) {
 		function cleanAmountForTopup(amount) {
 			amount = amount.replace(" ", "");
@@ -110,7 +164,7 @@ module.exports = class TopupService {
 				message: "Valid types are: gcash, maya, and card",
 			});
 
-		const description_id = uuidv4();
+		const description = uuidv4();
 		const modifiedAmountValueForPaymongo = parseInt(
 			cleanAmountForTopup(String(amount))
 		);
@@ -137,55 +191,109 @@ module.exports = class TopupService {
 			throw new HttpInternalServerError("INTERNAL_SERVER_ERROR", []);
 		}
 
+		// Topup must be minimum of 100 pesos.
 		if (amount < 100)
 			throw new HttpBadRequest("INVALID_MINIMUM_AMOUNT", {
 				message: "Amount must be greater than 100",
 			});
 
-		const result = await this.#repository.Topup({
-			user_id,
-			user_type: "USER_DRIVER",
-			amount,
-			type: "TOPUP",
-			payment_type: "GCASH",
-		});
+		let result = null;
 
-		const status = result[0][0].STATUS;
-		const topup_id = result[0][0].topup_id;
-		const topupResult = null;
+		// GCash Initial Topup
+		if (topup_type === "gcash") {
+			result = await this.#repository.Topup({
+				user_id,
+				user_type: "USER_DRIVER",
+				amount,
+				type: "TOPUP",
+				payment_type: "GCASH",
+			});
 
-		if (status === "SUCCESS") {
-			logger.info({
-				data: {
+			const status = result[0][0].STATUS;
+			const topup_id = result[0][0].topup_id;
+			const topupResult = null;
+
+			if (status === "SUCCESS") {
+				logger.info({
+					data: {
+						auth_token: authmoduleData.data.access_token,
+						user_id,
+						amount,
+						topup_id,
+					},
+					method: "Topup",
+					class: "TopupService",
+				});
+
+				const result = await this.#RequestToGCashSourceURL({
 					auth_token: authmoduleData.data.access_token,
 					user_id,
-					amount,
+					amount: modifiedAmountValueForPaymongo,
 					topup_id,
+				});
+
+				const checkout_url = result.data.attributes.redirect.checkout_url; // checkout_url, failed, success
+				const status = result.data.attributes.status;
+				const transaction_id = result.data.id;
+
+				await this.#repository.UpdateTopup({
+					status,
+					transaction_id,
+					topup_id,
+				});
+
+				return { checkout_url };
+			} else {
+				throw new HttpInternalServerError(status, []);
+			}
+		}
+		// Maya Initial Topup
+		else if (topup_type === "maya") {
+			logger.info({
+				TOPUP: {
+					type: topup_type,
+					amount,
 				},
-				method: "Topup",
-				class: "TopupService",
 			});
 
-			const result = await this.#RequestToGCashSourceURL({
-				auth_token: authmoduleData.data.access_token,
-				user_id,
-				amount: modifiedAmountValueForPaymongo,
-				topup_id,
-			});
+			try {
+				const result = await this.#RequestToMayaSourceURL({
+					auth_token: authmoduleData.data.access_token,
+					user_id,
+					description,
+					amount: cleanAmountForTopup(String(amount)),
+				});
 
-			const checkout_url = result.data.attributes.redirect.checkout_url; // checkout_url, failed, success
-			const status = result.data.attributes.status;
-			const transaction_id = result.data.id;
+				if (result) {
+					if (result.data.attributes.status === "awaiting_next_action") {
+						const topupResult = await this.#repository.TopupMaya({
+							user_id,
+							user_type: "USER_DRIVER",
+							amount,
+							type: "TOPUP",
+							payment_type: "MAYA",
+							transaction_id: result.data.id,
+							client_key: result.data.attributes.client_key,
+						});
 
-			await this.#repository.UpdateTopup({ status, transaction_id, topup_id });
+						console.log(result);
 
-			return { checkout_url };
-		} else {
-			throw new HttpInternalServerError(status, []);
+						if (topupResult[0][0].STATUS === "SUCCESS")
+							return {
+								checkout_url: result.data.attributes.next_action.redirect.url,
+							};
+					}
+				}
+
+				return result;
+			} catch (err) {
+				throw new HttpInternalServerError("Internal Server Error", []);
+			}
 		}
 	}
 
-	async Payment({
+	// GCash Payment
+	async GCashPayment({
 		user_type,
 		token,
 		user_id,
@@ -278,5 +386,51 @@ module.exports = class TopupService {
 		}
 
 		return "FAILED";
+	}
+
+	async MayaPayment({
+		user_type,
+		token,
+		user_id,
+		topup_id,
+		transaction_id,
+		payment_token_valid,
+	}) {
+		if (payment_token_valid) {
+			let details =
+				user_type === "tenant" &&
+				(await this.#repository.GetMayaTopupDetails(transaction_id));
+
+			const currentTopupStatus = details[0].payment_status;
+
+			if (currentTopupStatus === "pending") {
+				const result = await this.#RequestToMayaPaymentURL({
+					token,
+					transaction_id,
+					client_key: details[0].client_key,
+				});
+
+				let status =
+					result === "succeeded"
+						? "paid"
+						: result === "awaiting_payment_method" && "failed";
+
+				if (user_type === "tenant") {
+					await this.#repository.UpdateMayaTopup({
+						status,
+						transaction_id,
+						description_id: uuidv4(),
+					});
+				} else {
+					// for guest
+				}
+
+				return "SUCCESS";
+			}
+
+			if (currentTopupStatus === "paid") return "ALREADY_PAID";
+
+			return "FAILED";
+		}
 	}
 };
