@@ -336,7 +336,7 @@ module.exports = class TopupService {
 
 				await this.#repository.UpdateTopup({
 					status: "failed",
-					transaction_id,
+					// transaction_id,
 					topup_id,
 				});
 			} else {
@@ -425,7 +425,7 @@ module.exports = class TopupService {
 					// for guest
 				}
 
-				return "SUCCESS";
+				return status === "paid" ? "SUCCESS" : "FAILED";
 			}
 
 			if (currentTopupStatus === "paid") return "ALREADY_PAID";
