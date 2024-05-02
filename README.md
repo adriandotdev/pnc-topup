@@ -35,7 +35,7 @@ The response includes the redirection url to process the payment.
 
 ---
 
-### GCash Payment API - `GET /api/v1/payments/:user_type/gcash/:token/:topup_id/:transaction_id`
+### GCash Payment API - `GET /api/v1/payments/:user_type/gcash/:token/:topup_id`
 
 GCash Payment API
 
