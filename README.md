@@ -17,7 +17,7 @@ This API is for the initial topup transaction.
 "amount": 100
 ```
 
-> NOTE: amount must be greater than 100.
+> NOTE: amount must be minimum of 100
 
 **Response**
 
@@ -33,6 +33,8 @@ The response includes the redirection url to process the payment.
 }
 ```
 
+---
+
 ### GCash Payment API - `GET /api/v1/payments/:user_type/gcash/:token/:topup_id/:transaction_id`
 
 GCash Payment API
@@ -44,6 +46,34 @@ GCash Payment API
 - **user_type** - Value can be 'tenant' or 'guest'
 - **token** - Token from the redirection url
 - **topup_id** - ID of topup
+
+**Response**
+
+```json
+{
+	"status": 200,
+	"data": "SUCCESS",
+	"message": "Success"
+}
+```
+
+> NOTE: Client should have a route following this URL path
+
+`https://v2-stg-parkncharge.sysnetph.com/gcashPayment/:token/:user_id/:topup_id/tenant`
+
+---
+
+### Maya Payment API - `GET /api/v1/payments/:user_type/maya/:token/:transaction_id`
+
+Maya Payment API
+
+**Authorization:** Bearer TOKEN
+
+**Parameters**
+
+- **user_type** - Value can be a 'tenant' or 'guest'
+- **token** - Token from the redirection url
+- **transaction_id** - Transaction ID from the redirection url
 
 **Response**
 
