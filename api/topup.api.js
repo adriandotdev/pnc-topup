@@ -133,6 +133,7 @@ module.exports = (app) => {
 						message: err.message,
 					},
 				});
+
 				return res.status(err.status || 500).json({
 					status: err.status || 500,
 					data: err.data || [],
@@ -144,7 +145,10 @@ module.exports = (app) => {
 
 	app.get(
 		"/topup/api/v1/payments/:user_type/maya/:token/:transaction_id",
-		[tokenMiddleware.AuthenticateMayaPaymentToken()],
+		[
+			tokenMiddleware.AccessTokenVerifier(),
+			tokenMiddleware.AuthenticateMayaPaymentToken(),
+		],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
@@ -184,6 +188,7 @@ module.exports = (app) => {
 						message: err.message,
 					},
 				});
+
 				return res.status(err.status || 500).json({
 					status: err.status || 500,
 					data: err.data || [],
