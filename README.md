@@ -84,3 +84,7 @@ Maya Payment API
 	"message": "Success"
 }
 ```
+
+> NOTE: Client should have a route following this URL path
+
+`https://v2-stg-parkncharge.sysnetph.com/mayaPayment/:token/:user_id/tenant/?payment_intent_id=<payment_intent_id>`
