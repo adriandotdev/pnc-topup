@@ -87,7 +87,7 @@ module.exports = (app) => {
 	);
 
 	app.get(
-		"/topup/api/v1/payments/:user_type/gcash/:token/:topup_id/:transaction_id",
+		"/topup/api/v1/payments/:user_type/gcash/:token/:topup_id",
 		[
 			tokenMiddleware.AccessTokenVerifier(),
 			tokenMiddleware.AuthenticateGCashPaymentToken(),

@@ -348,7 +348,7 @@ module.exports = class TopupService {
 					message: "SUCCESS",
 				},
 			});
-			return "TOPUP_FAILED";
+			return "FAILED";
 		}
 
 		if (payment_token_valid) {
