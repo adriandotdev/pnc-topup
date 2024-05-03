@@ -149,13 +149,18 @@ module.exports = class TopupService {
 
 	async Topup({ user_id, topup_type, amount }) {
 		function cleanAmountForTopup(amount) {
-			amount = amount.replace(" ", "");
-			amount = amount.replace(".", "");
-			amount = amount.replace(",", "");
-			amount = amount.replace(/ /g, "");
-			amount = amount.replace(/[^A-Za-z0-9\-]/, "");
-			amount = amount + "00";
-			return amount;
+			const numberStr = amount.toString();
+
+			let cleanedNumber = null;
+
+			if (numberStr.includes(".")) {
+				const cleanedStr = numberStr.replace(".", "");
+				cleanedNumber = parseFloat(cleanedStr);
+			} else {
+				cleanedNumber = parseInt((amount += "00"));
+			}
+
+			return cleanedNumber;
 		}
 
 		// Check if topup type is valid. Valid types are: gcash, maya, and card
@@ -165,9 +170,8 @@ module.exports = class TopupService {
 			});
 
 		const description = uuidv4();
-		const modifiedAmountValueForPaymongo = parseInt(
-			cleanAmountForTopup(String(amount))
-		);
+
+		const modifiedAmountValueForPaymongo = cleanAmountForTopup(amount);
 
 		const authmoduleData = await this.#RequestAuthmodule();
 
