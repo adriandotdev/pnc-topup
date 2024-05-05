@@ -55,19 +55,18 @@ module.exports = class TopupRepository {
 
 	UpdateTopup(data) {
 		const QUERY = `
-            UPDATE topup_logs
-            SET 
-                payment_status = ?,
-				transaction_id = ?,
-				description = ?,
-                date_modified = NOW()
-            WHERE id = ?
+           CALL WEB_UPDATE_GCASH_PAYMENT_TOPUP(?,?,?,?)
         `;
 
 		return new Promise((resolve, reject) => {
 			mysql.query(
 				QUERY,
-				[data.status, data.transaction_id, data.description, data.topup_id],
+				[
+					data.status,
+					data.transaction_id,
+					data.description,
+					data.topup_id,
+				],
 				(err, result) => {
 					if (err) {
 						console.log(err);

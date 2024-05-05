@@ -98,7 +98,8 @@ module.exports = (app) => {
 		 */
 		async (req, res) => {
 			try {
-				const { user_type, token, topup_id, transaction_id } = req.params;
+				const { user_type, token, topup_id, transaction_id } =
+					req.params;
 
 				logger.info({
 					GCASH_PAYMENT_API_REQUEST: {

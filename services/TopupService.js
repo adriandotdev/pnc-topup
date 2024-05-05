@@ -28,7 +28,8 @@ module.exports = class TopupService {
 			{
 				headers: {
 					Accept: "application/json",
-					Authorization: "Basic " + process.env.AUTHMODULE_AUTHORIZATION,
+					Authorization:
+						"Basic " + process.env.AUTHMODULE_AUTHORIZATION,
 					"Content-Type": "application/json",
 				},
 			}
@@ -70,7 +71,12 @@ module.exports = class TopupService {
 		return { status: result.status, data: result.data.result.data };
 	}
 
-	async #RequestToMayaSourceURL({ auth_token, user_id, description, amount }) {
+	async #RequestToMayaSourceURL({
+		auth_token,
+		user_id,
+		description,
+		amount,
+	}) {
 		const result = await axios.post(
 			process.env.MAYA_PAYMENT_URL,
 			{
@@ -184,7 +190,10 @@ module.exports = class TopupService {
 			});
 
 			throw new HttpBadRequest("BAD_REQUEST", []);
-		} else if (authmoduleData.status >= 500 && authmoduleData.status < 600) {
+		} else if (
+			authmoduleData.status >= 500 &&
+			authmoduleData.status < 600
+		) {
 			logger.info({
 				AUTHMODULE_API_ERROR: {
 					message: "Internal Server Error",
@@ -236,7 +245,8 @@ module.exports = class TopupService {
 					topup_id,
 				});
 
-				const checkout_url = result.data.attributes.redirect.checkout_url; // checkout_url, failed, success
+				const checkout_url =
+					result.data.attributes.redirect.checkout_url; // checkout_url, failed, success
 				const status = result.data.attributes.status;
 				const transaction_id = result.data.id;
 
@@ -269,7 +279,9 @@ module.exports = class TopupService {
 				});
 
 				if (result) {
-					if (result.data.attributes.status === "awaiting_next_action") {
+					if (
+						result.data.attributes.status === "awaiting_next_action"
+					) {
 						const topupResult = await this.#repository.TopupMaya({
 							user_id,
 							user_type: "USER_DRIVER",
@@ -284,7 +296,9 @@ module.exports = class TopupService {
 
 						if (topupResult[0][0].STATUS === "SUCCESS")
 							return {
-								checkout_url: result.data.attributes.next_action.redirect.url,
+								checkout_url:
+									result.data.attributes.next_action.redirect
+										.url,
 							};
 					}
 				}
@@ -302,12 +316,12 @@ module.exports = class TopupService {
 		token,
 		user_id,
 		topup_id,
-		// transaction_id,
 		payment_token_valid,
 	}) {
 		logger.info({
 			PAYMENT_METHOD: {
 				class: "TopupService",
+				method: "GCashPayment",
 			},
 		});
 
@@ -340,7 +354,6 @@ module.exports = class TopupService {
 
 				await this.#repository.UpdateTopup({
 					status: "failed",
-					// transaction_id,
 					topup_id,
 				});
 			} else {
@@ -355,12 +368,19 @@ module.exports = class TopupService {
 			return "FAILED";
 		}
 
+		// If payment is valid
 		if (payment_token_valid) {
 			let details =
 				user_type === "tenant" &&
 				(await this.#repository.GetUserTopupDetails(topup_id));
 
-			if (details[0]?.payment_status === "pending") {
+			if (details.length === 0)
+				throw new HttpBadRequest("TOPUP_ID_NOT_FOUND", []);
+
+			if (details[0]?.payment_status === "paid") return "ALREADY_PAID";
+			else if (details[0]?.payment_status === "failed")
+				return "TOPUP_IS_ALREADY_FAILED";
+			else if (details[0]?.payment_status === "pending") {
 				const description = uuidv4();
 				console.log(
 					details[0].amount,
@@ -375,18 +395,23 @@ module.exports = class TopupService {
 				});
 
 				if (user_type === "tenant") {
-					await this.#repository.UpdateTopup({
-						status: result.data.attributes.status,
-						transaction_id: details[0].transaction_id,
-						description: description,
-						topup_id,
-					});
-				} else {
-					// FOR GUEST
+					const paymentUpdateResult =
+						await this.#repository.UpdateTopup({
+							status: result.data.attributes.status,
+							transaction_id: details[0].transaction_id,
+							description: description,
+							topup_id,
+						});
+
+					const status = paymentUpdateResult[0][0].STATUS;
+					const status_type = paymentUpdateResult[0][0].status_type;
+
+					if (status_type === "bad_request")
+						throw new HttpBadRequest(status, []);
 				}
 
 				if (result.data.attributes.status === "paid") return "SUCCESS";
-			} else if (details[0]?.payment_status === "paid") return "ALREADY_PAID";
+			}
 		}
 
 		return "FAILED";
