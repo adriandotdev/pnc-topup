@@ -55,7 +55,7 @@ module.exports = class TopupRepository {
 
 	UpdateTopup(data) {
 		const QUERY = `
-           CALL WEB_UPDATE_GCASH_PAYMENT_TOPUP(?,?,?,?)
+           CALL WEB_USER_UPDATE_GCASH_PAYMENT_TOPUP(?,?,?,?)
         `;
 
 		return new Promise((resolve, reject) => {
@@ -119,21 +119,12 @@ module.exports = class TopupRepository {
 	}
 
 	UpdateMayaTopup({ status, transaction_id, description_id }) {
-		const QUERY = `
-			UPDATE
-				topup_logs
-			SET 
-				payment_status = ?,
-				description = ?,
-				date_modified = NOW()
-			WHERE 
-				transaction_id = ?
-		`;
+		const QUERY = `CALL WEB_USER_UPDATE_MAYA_PAYMENT_TOPUP(?,?,?)`;
 
 		return new Promise((resolve, reject) => {
 			mysql.query(
 				QUERY,
-				[status, description_id, transaction_id],
+				[status, transaction_id, description_id],
 				(err, result) => {
 					if (err) {
 						reject(err);

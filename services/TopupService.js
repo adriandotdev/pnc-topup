@@ -311,13 +311,7 @@ module.exports = class TopupService {
 	}
 
 	// GCash Payment
-	async GCashPayment({
-		user_type,
-		token,
-		user_id,
-		topup_id,
-		payment_token_valid,
-	}) {
+	async GCashPayment({ user_type, token, topup_id, payment_token_valid }) {
 		logger.info({
 			PAYMENT_METHOD: {
 				class: "TopupService",
@@ -334,8 +328,17 @@ module.exports = class TopupService {
 			return amount;
 		}
 
+		let details =
+			user_type === "tenant" &&
+			(await this.#repository.GetUserTopupDetails(topup_id));
 		let status = token.substring(token.length - 1);
 		let parsedToken = token.substring(0, token.length - 2);
+
+		if (details[0]?.payment_status === "paid")
+			throw new HttpBadRequest("ALREADY_PAID", []);
+
+		if (details[0]?.payment_status === "failed")
+			throw new HttpBadRequest("ALREADY_FAILED", []);
 
 		if (status === "0") {
 			logger.info({
@@ -345,20 +348,10 @@ module.exports = class TopupService {
 				},
 			});
 
-			if (user_type === "tenant") {
-				logger.info({
-					TENANT: {
-						message: "SUCCESS",
-					},
-				});
-
-				await this.#repository.UpdateTopup({
-					status: "failed",
-					topup_id,
-				});
-			} else {
-				// if guest
-			}
+			await this.#repository.UpdateTopup({
+				status: "failed",
+				topup_id,
+			});
 
 			logger.info({
 				TOPUP_FAILED_EXIT: {
@@ -370,17 +363,14 @@ module.exports = class TopupService {
 
 		// If payment is valid
 		if (payment_token_valid) {
-			let details =
-				user_type === "tenant" &&
-				(await this.#repository.GetUserTopupDetails(topup_id));
-
 			if (details.length === 0)
 				throw new HttpBadRequest("TOPUP_ID_NOT_FOUND", []);
 
-			if (details[0]?.payment_status === "paid") return "ALREADY_PAID";
+			if (details[0]?.payment_status === "paid")
+				throw new HttpBadRequest("ALREADY_PAID", []);
 			else if (details[0]?.payment_status === "failed")
-				return "TOPUP_IS_ALREADY_FAILED";
-			else if (details[0]?.payment_status === "pending") {
+				throw new HttpBadRequest("ALREADY_FAILED", []);
+			else {
 				const description = uuidv4();
 				console.log(
 					details[0].amount,
@@ -430,9 +420,16 @@ module.exports = class TopupService {
 				user_type === "tenant" &&
 				(await this.#repository.GetMayaTopupDetails(transaction_id));
 
+			if (details.length === 0)
+				throw new HttpBadRequest("TRANSACTION_ID_NOT_FOUND", []);
+
 			const currentTopupStatus = details[0].payment_status;
 
-			if (currentTopupStatus === "pending") {
+			if (currentTopupStatus === "paid")
+				throw new HttpBadRequest("ALREADY_PAID");
+			else if (currentTopupStatus === "failed")
+				throw new HttpBadRequest("ALREADY_FAILED");
+			else {
 				const result = await this.#RequestToMayaPaymentURL({
 					token,
 					transaction_id,
@@ -445,6 +442,7 @@ module.exports = class TopupService {
 						: result === "awaiting_payment_method" && "failed";
 
 				if (user_type === "tenant") {
+					console.log("UPDATING MAYA TOPUP", status);
 					await this.#repository.UpdateMayaTopup({
 						status,
 						transaction_id,
