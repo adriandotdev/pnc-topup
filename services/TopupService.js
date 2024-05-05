@@ -292,8 +292,6 @@ module.exports = class TopupService {
 							client_key: result.data.attributes.client_key,
 						});
 
-						console.log(result);
-
 						if (topupResult[0][0].STATUS === "SUCCESS")
 							return {
 								checkout_url:
@@ -372,10 +370,6 @@ module.exports = class TopupService {
 				throw new HttpBadRequest("ALREADY_FAILED", []);
 			else {
 				const description = uuidv4();
-				console.log(
-					details[0].amount,
-					cleanAmountForTopup(String(details[0].amount))
-				);
 
 				const result = await this.#RequestToGCashPaymentURL({
 					amount: cleanAmountForTopup(String(details[0].amount)),
@@ -442,7 +436,6 @@ module.exports = class TopupService {
 						: result === "awaiting_payment_method" && "failed";
 
 				if (user_type === "tenant") {
-					console.log("UPDATING MAYA TOPUP", status);
 					await this.#repository.UpdateMayaTopup({
 						status,
 						transaction_id,
