@@ -87,19 +87,15 @@ module.exports = (app) => {
 	);
 
 	app.get(
-		"/topup/api/v1/payments/:user_type/gcash/:token/:topup_id",
-		[
-			tokenMiddleware.AccessTokenVerifier(),
-			tokenMiddleware.AuthenticateGCashPaymentToken(),
-		],
+		"/topup/api/v1/payments/tenant/gcash/:token/:topup_id",
+		[tokenMiddleware.AuthenticateGCashPaymentToken()],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
 		async (req, res) => {
 			try {
-				const { user_type, token, topup_id, transaction_id } =
-					req.params;
+				const { token, topup_id } = req.params;
 
 				logger.info({
 					GCASH_PAYMENT_API_REQUEST: {
@@ -111,11 +107,8 @@ module.exports = (app) => {
 				});
 
 				const result = await service.GCashPayment({
-					user_type,
 					token,
-					user_id: req.id,
 					topup_id,
-					transaction_id,
 					payment_token_valid: req.payment_token_valid,
 				});
 
@@ -134,7 +127,7 @@ module.exports = (app) => {
 						message: err.message,
 					},
 				});
-
+				console.log(err);
 				return res.status(err.status || 500).json({
 					status: err.status || 500,
 					data: err.data || [],
@@ -145,18 +138,15 @@ module.exports = (app) => {
 	);
 
 	app.get(
-		"/topup/api/v1/payments/:user_type/maya/:token/:transaction_id",
-		[
-			tokenMiddleware.AccessTokenVerifier(),
-			tokenMiddleware.AuthenticateMayaPaymentToken(),
-		],
+		"/topup/api/v1/payments/tenant/maya/:token/:transaction_id",
+		[tokenMiddleware.AuthenticateMayaPaymentToken()],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
 		async (req, res) => {
 			try {
-				const { user_type, token, transaction_id } = req.params;
+				const { token, transaction_id } = req.params;
 				logger.info({
 					MAYA_PAYMENT_API_REQUEST: {
 						data: {
@@ -167,7 +157,6 @@ module.exports = (app) => {
 				});
 
 				const result = await service.MayaPayment({
-					user_type,
 					token,
 					transaction_id,
 					payment_token_valid: req.payment_token_valid,
