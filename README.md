@@ -35,15 +35,14 @@ The response includes the redirection url to process the payment.
 
 ---
 
-### GCash Payment API - `GET /api/v1/payments/:user_type/gcash/:token/:topup_id`
+### GCash Payment API - `GET /api/v1/payments/tenant/gcash/:token/:topup_id`
 
 GCash Payment API
 
-**Authorization:** Bearer TOKEN
+**Authorization:** Basic TOKEN
 
 **Parameters**
 
-- **user_type** - Value can be 'tenant' or 'guest'
 - **token** - Token from the redirection url
 - **topup_id** - ID of topup
 
@@ -63,15 +62,14 @@ GCash Payment API
 
 ---
 
-### Maya Payment API - `GET /api/v1/payments/:user_type/maya/:token/:transaction_id`
+### Maya Payment API - `GET /api/v1/payments/tenant/maya/:token/:transaction_id`
 
 Maya Payment API
 
-**Authorization:** Bearer TOKEN
+**Authorization:** Basic TOKEN
 
 **Parameters**
 
-- **user_type** - Value can be a 'tenant' or 'guest'
 - **token** - Token from the redirection url
 - **transaction_id** - Transaction ID from the redirection url
 
