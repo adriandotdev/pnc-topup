@@ -115,3 +115,26 @@ Verify or check the status of topup
 	"message": "SUCCESS"
 }
 ```
+
+---
+
+### User's Transactions - `GET /api/v1/transactions?limit=10&offset=0`
+
+Retrieve user transactions
+
+**Authorization:** Basic TOKEN
+
+**Queries**
+
+- **limit** - Number of objects to retrieved. Type of Number.
+- **offset** - Starting row to retrieved. Type of Number.
+
+**Response**
+
+```json
+{
+	"status": 200,
+	"data": [],
+	"message": "SUCCESS"
+}
+```
