@@ -86,3 +86,26 @@ Maya Payment API
 > NOTE: Client should have a route following this URL path
 
 `https://v2-stg-parkncharge.sysnetph.com/mayaPayment/:token/:user_id/tenant/?payment_intent_id=<payment_intent_id>`
+
+---
+
+### Payment Verification - `GET /api/v1/payments/tenant/verify/:transaction_id`
+
+Verify or check the status of topup
+
+**Parameter**
+
+- **transaction_id** - Transaction ID of the topup
+
+**Response**
+
+```json
+{
+	"status": 200,
+	"data": {
+		"topup_status": "paid",
+		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
+	},
+	"message": "SUCCESS"
+}
+```
