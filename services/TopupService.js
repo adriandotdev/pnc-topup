@@ -317,6 +317,9 @@ module.exports = class TopupService {
 		let status = token.substring(token.length - 1);
 		let parsedToken = token.substring(0, token.length - 2);
 
+		if (details.length === 0)
+			throw new HttpBadRequest("TOPUP_ID_NOT_FOUND", []);
+
 		if (details[0]?.payment_status === "paid")
 			throw new HttpBadRequest("ALREADY_PAID", []);
 

@@ -1,5 +1,5 @@
 const TokenMiddleware = require("../middlewares/TokenMiddleware"); // Remove this if unused
-const { validationResult, body } = require("express-validator");
+const { validationResult, body, param } = require("express-validator");
 
 const logger = require("../config/winston");
 
@@ -7,6 +7,8 @@ const logger = require("../config/winston");
 // Import MISC HERE
 
 const TopupService = require("../services/TopupService");
+
+const { HttpUnprocessableEntity } = require("../utils/HttpError");
 
 /**
  * @param {import('express').Express} app
@@ -33,7 +35,19 @@ module.exports = (app) => {
 
 	app.post(
 		"/topup/api/v1/payments/topup",
-		[tokenMiddleware.AccessTokenVerifier()],
+		[
+			tokenMiddleware.AccessTokenVerifier(),
+			body("topup_type")
+				.notEmpty()
+				.withMessage("Missing required property: topup_type")
+				.custom((value) => ["maya", "gcash"].includes(value))
+				.withMessage("Invalid topup: Valid values are: gcash, maya, and card"),
+			body("amount")
+				.notEmpty()
+				.withMessage("Missing required property: amount")
+				.custom((value) => typeof value === "number")
+				.withMessage("Property amount must be in type of number"),
+		],
 
 		/**
 		 * @param {import('express').Request} req
@@ -41,6 +55,8 @@ module.exports = (app) => {
 		 */
 		async (req, res) => {
 			try {
+				validate(req, res);
+
 				const { topup_type, amount } = req.body;
 
 				logger.info({
@@ -88,13 +104,22 @@ module.exports = (app) => {
 
 	app.get(
 		"/topup/api/v1/payments/tenant/gcash/:token/:topup_id",
-		[tokenMiddleware.AuthenticateGCashPaymentToken()],
+		[
+			tokenMiddleware.BasicTokenVerifier(),
+			tokenMiddleware.AuthenticateGCashPaymentToken(),
+			param("token").notEmpty().withMessage("Missing required property: token"),
+			param("topup_id")
+				.notEmpty()
+				.withMessage("Missing required property: topup_id"),
+		],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
 		async (req, res) => {
 			try {
+				validate(req, res);
+
 				const { token, topup_id } = req.params;
 
 				logger.info({
@@ -139,7 +164,14 @@ module.exports = (app) => {
 
 	app.get(
 		"/topup/api/v1/payments/tenant/maya/:token/:transaction_id",
-		[tokenMiddleware.AuthenticateMayaPaymentToken()],
+		[
+			tokenMiddleware.BasicTokenVerifier(),
+			tokenMiddleware.AuthenticateMayaPaymentToken(),
+			param("token").notEmpty().withMessage("Missing required property: token"),
+			param("transaction_id")
+				.notEmpty()
+				.withMessage("Missing required property: transaction_id"),
+		],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
@@ -190,7 +222,12 @@ module.exports = (app) => {
 
 	app.get(
 		"/topup/api/v1/payments/tenant/verify/:transaction_id",
-		[],
+		[
+			tokenMiddleware.BasicTokenVerifier(),
+			param("transaction_id")
+				.notEmpty()
+				.withMessage("Missing required property: transaction_id"),
+		],
 		/**
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res

@@ -151,9 +151,9 @@ module.exports = class TopupRepository {
 		const QUERY = `
 			SELECT 
 				id AS topup_id,
-				previous_balance,
+				initial_rfid_balance,
 				amount,
-				current_balance,
+				current_rfid_balance,
 				type,
 				payment_type,
 				payment_status,
