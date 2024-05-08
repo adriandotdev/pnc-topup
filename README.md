@@ -51,8 +51,11 @@ GCash Payment API
 ```json
 {
 	"status": 200,
-	"data": "SUCCESS",
-	"message": "Success"
+	"data": {
+		"topup_status": "paid",
+		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
+	},
+	"message": "SUCCESS"
 }
 ```
 
@@ -78,8 +81,11 @@ Maya Payment API
 ```json
 {
 	"status": 200,
-	"data": "SUCCESS",
-	"message": "Success"
+	"data": {
+		"topup_status": "paid",
+		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
+	},
+	"message": "SUCCESS"
 }
 ```
 
