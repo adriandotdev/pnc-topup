@@ -87,23 +87,7 @@ module.exports = class TokenMiddleware {
 				});
 				next();
 			} catch (err) {
-				logger.error({
-					ACCESS_TOKEN_VERIFIER_MIDDLEWARE_ERROR: {
-						message: err.message,
-					},
-				});
-
-				if (err !== null) {
-					return res.status(err.status || 500).json({
-						status: err.status || 500,
-						data: err.data,
-						message: err.message,
-					});
-				}
-
-				return res
-					.status(500)
-					.json({ status: 500, data: [], message: "Internal Server Error" });
+				next(err);
 			}
 		};
 	}
@@ -193,17 +177,7 @@ module.exports = class TokenMiddleware {
 				});
 				next();
 			} catch (err) {
-				if (err !== null) {
-					return res.status(err.status ? err.status : 500).json({
-						status: err.status ? err.status : 500,
-						data: err.data,
-						message: err.message,
-					});
-				}
-
-				return res
-					.status(500)
-					.json({ status: 500, data: [], message: "Internal Server Error" });
+				next(err);
 			}
 		};
 	}
@@ -226,6 +200,9 @@ module.exports = class TokenMiddleware {
 			});
 
 			try {
+				if (!req.headers.authorization)
+					throw new HttpUnauthorized("MISSING_BASIC_TOKEN", []);
+
 				const securityType = req.headers.authorization.split(" ")[0];
 				const token = req.headers.authorization.split(" ")[1];
 
@@ -258,23 +235,7 @@ module.exports = class TokenMiddleware {
 
 				next();
 			} catch (err) {
-				logger.error({
-					BASIC_TOKEN_VERIFIER_MIDDLEWARE_ERROR: {
-						message: err.message,
-					},
-				});
-
-				if (err !== null) {
-					return res.status(err.status ? err.status : 500).json({
-						status: err.status ? err.status : 500,
-						data: err.data,
-						message: err.message,
-					});
-				}
-
-				return res
-					.status(500)
-					.json({ status: 500, data: [], message: "Internal Server Error" });
+				next(err);
 			}
 		};
 	}
@@ -290,7 +251,7 @@ module.exports = class TokenMiddleware {
 				let token = req.params.token;
 
 				if (token === null || token === undefined)
-					throw new HttpForbidden("INVALID_PAYMENT_TOKEN_1", []);
+					throw new HttpForbidden("INVALID_PAYMENT_TOKEN", []);
 
 				let filteredToken = token.substring(0, token.length - 2);
 
@@ -307,9 +268,11 @@ module.exports = class TokenMiddleware {
 					privateKey,
 					{ algorithms: "RS256" },
 					(err, decoded) => {
-						if (err) {
-							throw new HttpForbidden("INVALID_PAYMENT_TOKEN_2", []);
-						}
+						if (err instanceof jwt.TokenExpiredError)
+							throw new HttpForbidden("PAYMENT_TOKEN_EXPIRED", []);
+
+						if (err instanceof jwt.JsonWebTokenError)
+							throw new HttpUnauthorized("INVALID_PAYMENT_TOKEN", []);
 
 						// if (decoded.env !== process.env.NODE_ENV) {
 						// 	console.log("TOKEN ENVIRONMENT: " + decoded.env);
@@ -327,11 +290,7 @@ module.exports = class TokenMiddleware {
 					}
 				);
 			} catch (err) {
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		};
 	}
@@ -347,7 +306,7 @@ module.exports = class TokenMiddleware {
 				let token = req.params.token;
 
 				if (token === null || token === undefined)
-					throw new HttpForbidden("INVALID_PAYMENT_TOKEN_1", []);
+					throw new HttpForbidden("INVALID_PAYMENT_TOKEN", []);
 
 				let privateKey = fs.readFileSync(
 					path.dirname(__dirname) +
@@ -362,9 +321,11 @@ module.exports = class TokenMiddleware {
 					privateKey,
 					{ algorithms: "RS256" },
 					(err, decoded) => {
-						if (err) {
-							throw new HttpForbidden("INVALID_PAYMENT_TOKEN_2", []);
-						}
+						if (err instanceof jwt.TokenExpiredError)
+							throw new HttpForbidden("PAYMENT_TOKEN_EXPIRED", []);
+
+						if (err instanceof jwt.JsonWebTokenError)
+							throw new HttpUnauthorized("INVALID_PAYMENT_TOKEN", []);
 
 						// if (decoded.env !== process.env.NODE_ENV) {
 						// 	console.log("TOKEN ENVIRONMENT: " + decoded.env);
@@ -382,11 +343,7 @@ module.exports = class TokenMiddleware {
 					}
 				);
 			} catch (err) {
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		};
 	}

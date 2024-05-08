@@ -1,4 +1,5 @@
 const logger = require("../config/winston");
+const { HttpForbidden } = require("../utils/HttpError");
 
 const ROLES = {
 	ADMIN: "ADMIN",
@@ -25,16 +26,18 @@ class RoleManagementMiddleware {
 				},
 			});
 
-			if (req.role && role.includes(req.role)) next();
-			else {
-				logger.error({
-					CHECK_ROLE_METHOD_ERROR: {
-						message: "FORBIDDEN",
-					},
-				});
-				return res
-					.status(403)
-					.json({ status: 403, data: [], message: "Forbidden" });
+			try {
+				if (req.role && role.includes(req.role)) next();
+				else {
+					logger.error({
+						CHECK_ROLE_METHOD_ERROR: {
+							message: "FORBIDDEN",
+						},
+					});
+					throw new HttpForbidden("Forbidden", []);
+				}
+			} catch (err) {
+				next(err);
 			}
 		};
 	}

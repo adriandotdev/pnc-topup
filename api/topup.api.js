@@ -53,7 +53,7 @@ module.exports = (app) => {
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
-		async (req, res) => {
+		async (req, res, next) => {
 			try {
 				validate(req, res);
 
@@ -87,17 +87,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
-				logger.error({
-					TOPUP_API_ERROR: {
-						err,
-						message: err.message,
-					},
-				});
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		}
 	);
@@ -116,7 +106,7 @@ module.exports = (app) => {
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
-		async (req, res) => {
+		async (req, res, next) => {
 			try {
 				validate(req, res);
 
@@ -146,18 +136,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
-				logger.error({
-					GCASH_PAYMENT_API_ERROR: {
-						err,
-						message: err.message,
-					},
-				});
-				console.log(err);
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		}
 	);
@@ -176,7 +155,7 @@ module.exports = (app) => {
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
-		async (req, res) => {
+		async (req, res, next) => {
 			try {
 				const { token, transaction_id } = req.params;
 				logger.info({
@@ -204,18 +183,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
-				logger.error({
-					MAYA_PAYMENT_API_ERROR: {
-						err,
-						message: err.message,
-					},
-				});
-
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		}
 	);
@@ -232,7 +200,7 @@ module.exports = (app) => {
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
-		async (req, res) => {
+		async (req, res, next) => {
 			try {
 				const { transaction_id } = req.params;
 
@@ -257,18 +225,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "SUCCESS" });
 			} catch (err) {
-				logger.error({
-					PAYMENT_VERIFICATION_API_ERROR: {
-						err,
-						message: err.message,
-					},
-				});
-
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		}
 	);
@@ -280,7 +237,7 @@ module.exports = (app) => {
 		 * @param {import('express').Request} req
 		 * @param {import('express').Response} res
 		 */
-		async (req, res) => {
+		async (req, res, next) => {
 			try {
 				const { limit, offset } = req.query;
 
@@ -305,19 +262,32 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
-				logger.error({
-					TRANSACTIONS_API_ERROR: {
-						err,
-						message: err.message,
-					},
-				});
-
-				return res.status(err.status || 500).json({
-					status: err.status || 500,
-					data: err.data || [],
-					message: err.message || "Internal Server Error",
-				});
+				next(err);
 			}
 		}
 	);
+
+	app.use((err, req, res, next) => {
+		logger.error({
+			API_REQUEST_ERROR: {
+				message: err.message,
+				stack: err.stack.replace(/\\/g, "/"), // Include stack trace for debugging
+				request: {
+					method: req.method,
+					url: req.url,
+					code: err.status || 500,
+				},
+				data: err.data || [],
+			},
+		});
+
+		const status = err.status || 500;
+		const message = err.message || "Internal Server Error";
+
+		res.status(status).json({
+			status,
+			data: err.data || [],
+			message,
+		});
+	});
 };
