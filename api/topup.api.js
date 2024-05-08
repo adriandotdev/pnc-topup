@@ -235,4 +235,52 @@ module.exports = (app) => {
 			}
 		}
 	);
+
+	app.get(
+		"/topup/api/v1/transactions",
+		[tokenMiddleware.AccessTokenVerifier()],
+		/**
+		 * @param {import('express').Request} req
+		 * @param {import('express').Response} res
+		 */
+		async (req, res) => {
+			try {
+				const { limit, offset } = req.query;
+
+				logger.info({
+					TRANSACTIONS_API_REQUEST: {
+						data: {
+							user_id: req.id,
+						},
+						message: "SUCCESS",
+					},
+				});
+
+				const result = await service.GetTransactions(req.id, +limit, +offset);
+
+				logger.info({
+					TRANSACTIONS_API_RESPONSE: {
+						message: "SUCCESS",
+					},
+				});
+
+				return res
+					.status(200)
+					.json({ status: 200, data: result, message: "Success" });
+			} catch (err) {
+				logger.error({
+					TRANSACTIONS_API_ERROR: {
+						err,
+						message: err.message,
+					},
+				});
+
+				return res.status(err.status || 500).json({
+					status: err.status || 500,
+					data: err.data || [],
+					message: err.message || "Internal Server Error",
+				});
+			}
+		}
+	);
 };

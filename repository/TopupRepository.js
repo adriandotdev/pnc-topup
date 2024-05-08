@@ -146,4 +146,33 @@ module.exports = class TopupRepository {
 			});
 		});
 	}
+
+	GetTransactions(userID, limit, offset) {
+		const QUERY = `
+			SELECT 
+				id AS topup_id,
+				previous_balance,
+				amount,
+				current_balance,
+				type,
+				payment_type,
+				payment_status,
+				transaction_id,
+				date_created
+			FROM topup_logs
+			WHERE user_id = ?
+			ORDER BY date_created DESC
+			LIMIT ? OFFSET ?
+		`;
+
+		return new Promise((resolve, reject) => {
+			mysql.query(QUERY, [userID, limit, offset], (err, result) => {
+				if (err) {
+					reject(err);
+				}
+
+				resolve(result);
+			});
+		});
+	}
 };

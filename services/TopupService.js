@@ -333,6 +333,7 @@ module.exports = class TopupService {
 
 			await this.#repository.UpdateTopup({
 				status: "failed",
+				transaction_id: details[0].transaction_id,
 				topup_id,
 			});
 
@@ -358,6 +359,15 @@ module.exports = class TopupService {
 				throw new HttpBadRequest("ALREADY_FAILED", []);
 			else {
 				const description = uuidv4();
+
+				logger.info({
+					data: {
+						amount: cleanAmountForTopup(String(details[0].amount)),
+						description,
+						id: details[0].transaction_id,
+						token: parsedToken,
+					},
+				});
 
 				const result = await this.#RequestToGCashPaymentURL({
 					amount: cleanAmountForTopup(String(details[0].amount)),
@@ -438,6 +448,32 @@ module.exports = class TopupService {
 				throw new HttpNotFound("TRANSACTION_ID_NOT_FOUND", []);
 
 			return result[0];
+		} catch (err) {
+			throw err;
+		}
+	}
+
+	async GetTransactions(userID, limit, offset) {
+		try {
+			if (typeof limit !== "number" || typeof offset !== "number")
+				throw new HttpBadRequest("LIMIT_AND_OFFSET_MUST_BE_TYPE_OF_NUMBER", []);
+
+			if (limit < 0 || offset < 0)
+				throw new HttpBadRequest(
+					"LIMIT_AND_OFFSET_MUST_BE_POSITIVE_NUMBER",
+					[]
+				);
+
+			if (limit !== parseInt(limit) || offset !== parseInt(offset))
+				throw new HttpBadRequest("LIMIT_AND_OFFSET_MUST_BE_A_WHOLE_NUMBER", []);
+
+			const result = await this.#repository.GetTransactions(
+				userID,
+				limit || 10,
+				offset || 0
+			);
+
+			return result;
 		} catch (err) {
 			throw err;
 		}
