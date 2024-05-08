@@ -61,12 +61,7 @@ module.exports = class TopupRepository {
 		return new Promise((resolve, reject) => {
 			mysql.query(
 				QUERY,
-				[
-					data.status,
-					data.transaction_id,
-					data.description,
-					data.topup_id,
-				],
+				[data.status, data.transaction_id, data.description, data.topup_id],
 				(err, result) => {
 					if (err) {
 						console.log(err);
@@ -133,6 +128,22 @@ module.exports = class TopupRepository {
 					resolve(result);
 				}
 			);
+		});
+	}
+
+	VerifyPayment(transactionID) {
+		const QUERY = `
+			SELECT payment_status AS topup_status, transaction_id FROM topup_logs WHERE transaction_id = ?
+		`;
+
+		return new Promise((resolve, reject) => {
+			mysql.query(QUERY, [transactionID], (err, result) => {
+				if (err) {
+					reject(err);
+				}
+
+				resolve(result);
+			});
 		});
 	}
 };

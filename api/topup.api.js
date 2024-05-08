@@ -187,4 +187,52 @@ module.exports = (app) => {
 			}
 		}
 	);
+
+	app.get(
+		"/topup/api/v1/payments/tenant/verify/:transaction_id",
+		[],
+		/**
+		 * @param {import('express').Request} req
+		 * @param {import('express').Response} res
+		 */
+		async (req, res) => {
+			try {
+				const { transaction_id } = req.params;
+
+				logger.info({
+					PAYMENT_VERIFICATION_API_REQUEST: {
+						data: {
+							transaction_id,
+						},
+						message: "SUCESS",
+					},
+				});
+
+				const result = await service.VerifyPayment(transaction_id);
+
+				logger.info({
+					PAYMENT_VERIFICATION_API_RESPONSE: {
+						message: "SUCCESS",
+					},
+				});
+
+				return res
+					.status(200)
+					.json({ status: 200, data: result, message: "SUCCESS" });
+			} catch (err) {
+				logger.error({
+					PAYMENT_VERIFICATION_API_ERROR: {
+						err,
+						message: err.message,
+					},
+				});
+
+				return res.status(err.status || 500).json({
+					status: err.status || 500,
+					data: err.data || [],
+					message: err.message || "Internal Server Error",
+				});
+			}
+		}
+	);
 };

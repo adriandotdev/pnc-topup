@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require("uuid");
 const {
 	HttpBadRequest,
 	HttpInternalServerError,
+	HttpNotFound,
 } = require("../utils/HttpError");
 const axios = require("axios");
 const logger = require("../config/winston");
@@ -374,11 +375,15 @@ module.exports = class TopupService {
 
 				if (status_type === "bad_request") throw new HttpBadRequest(status, []);
 
-				if (result.data.attributes.status === "paid") return "SUCCESS";
+				if (result.data.attributes.status === "paid")
+					return {
+						topup_status: "PAID",
+						transaction_id: details[0].transaction_id,
+					};
 			}
 		}
 
-		return "FAILED";
+		return { topup_status: "FAILED" };
 	}
 
 	async MayaPayment({ token, transaction_id, payment_token_valid }) {
@@ -412,8 +417,23 @@ module.exports = class TopupService {
 					description_id: uuidv4(),
 				});
 
-				return status === "paid" ? "SUCCESS" : "FAILED";
+				return status === "paid"
+					? { topup_status: "PAID", transaction_id }
+					: { topup_status: "FAILED" };
 			}
+		}
+	}
+
+	async VerifyPayment(transactionID) {
+		try {
+			const result = await this.#repository.VerifyPayment(transactionID);
+
+			if (result.length === 0)
+				throw new HttpNotFound("TRANSACTION_ID_NOT_FOUND", []);
+
+			return result[0];
+		} catch (err) {
+			throw err;
 		}
 	}
 };
