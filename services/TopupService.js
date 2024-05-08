@@ -341,7 +341,10 @@ module.exports = class TopupService {
 					message: "SUCCESS",
 				},
 			});
-			return "FAILED";
+			return {
+				topup_status: "FAILED",
+				transaction_id: details[0].transaction_id,
+			};
 		}
 
 		// If payment is valid
@@ -383,7 +386,10 @@ module.exports = class TopupService {
 			}
 		}
 
-		return { topup_status: "FAILED" };
+		return {
+			topup_status: "FAILED",
+			transaction_id: details[0].transaction_id,
+		};
 	}
 
 	async MayaPayment({ token, transaction_id, payment_token_valid }) {
@@ -419,7 +425,7 @@ module.exports = class TopupService {
 
 				return status === "paid"
 					? { topup_status: "PAID", transaction_id }
-					: { topup_status: "FAILED" };
+					: { topup_status: "FAILED", transaction_id };
 			}
 		}
 	}
