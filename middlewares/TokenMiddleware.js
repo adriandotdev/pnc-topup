@@ -269,7 +269,7 @@ module.exports = class TokenMiddleware {
 					{ algorithms: "RS256" },
 					(err, decoded) => {
 						if (err instanceof jwt.TokenExpiredError)
-							throw new HttpForbidden("PAYMENT_TOKEN_EXPIRED", []);
+							throw new HttpForbidden("TOKEN_EXPIRED", []);
 
 						if (err instanceof jwt.JsonWebTokenError)
 							throw new HttpUnauthorized("INVALID_PAYMENT_TOKEN", []);
@@ -322,7 +322,7 @@ module.exports = class TokenMiddleware {
 					{ algorithms: "RS256" },
 					(err, decoded) => {
 						if (err instanceof jwt.TokenExpiredError)
-							throw new HttpForbidden("PAYMENT_TOKEN_EXPIRED", []);
+							throw new HttpForbidden("TOKEN_EXPIRED", []);
 
 						if (err instanceof jwt.JsonWebTokenError)
 							throw new HttpUnauthorized("INVALID_PAYMENT_TOKEN", []);
