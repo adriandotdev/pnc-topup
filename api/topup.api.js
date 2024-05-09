@@ -244,13 +244,17 @@ module.exports = (app) => {
 				logger.info({
 					TRANSACTIONS_API_REQUEST: {
 						data: {
-							user_id: req.id,
+							rfid_card_tag: req.rfid_card_tag,
 						},
 						message: "SUCCESS",
 					},
 				});
 
-				const result = await service.GetTransactions(req.id, +limit, +offset);
+				const result = await service.GetTransactions(
+					req.rfid_card_tag,
+					+limit,
+					+offset
+				);
 
 				logger.info({
 					TRANSACTIONS_API_RESPONSE: {

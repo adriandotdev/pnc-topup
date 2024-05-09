@@ -456,7 +456,7 @@ module.exports = class TopupService {
 		}
 	}
 
-	async GetTransactions(userID, limit, offset) {
+	async GetTransactions(rfidCardTag, limit, offset) {
 		try {
 			if (typeof limit !== "number" || typeof offset !== "number")
 				throw new HttpBadRequest("LIMIT_AND_OFFSET_MUST_BE_TYPE_OF_NUMBER", []);
@@ -471,7 +471,7 @@ module.exports = class TopupService {
 				throw new HttpBadRequest("LIMIT_AND_OFFSET_MUST_BE_A_WHOLE_NUMBER", []);
 
 			const result = await this.#repository.GetTransactions(
-				userID,
+				rfidCardTag,
 				limit || 10,
 				offset || 0
 			);

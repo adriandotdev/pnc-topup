@@ -147,26 +147,46 @@ module.exports = class TopupRepository {
 		});
 	}
 
-	GetTransactions(userID, limit, offset) {
+	GetTransactions(rfidCardTag, limit, offset) {
 		const QUERY = `
+		SELECT * FROM (
 			SELECT 
-				id AS topup_id,
-				initial_rfid_balance,
-				amount,
-				current_rfid_balance,
+				'CHARGING' AS type,
+				id, 
+				rfid_card_tag, 
+				charge_in_datetime, 
+				initial_rfid_balance, 
+				charge_out_datetime, 
+				plug_out_datetime, 
+				price, 
+				current_rfid_balance, 
+				'-' AS payment_type, 
+				'-' AS payment_status, 
+				date_created
+			FROM evse_records
+				UNION ALL
+			SELECT 
 				type,
-				payment_type,
-				payment_status,
-				transaction_id,
+				id, 
+				rfid_card_tag, 
+				'-' AS charge_in_datetime, 
+				initial_rfid_balance, 
+				'-' AS charge_out_datetime, 
+				'-' AS plug_out_datetime, 
+				amount, 
+				current_rfid_balance,  
+				payment_type, 
+				payment_status, 
 				date_created
 			FROM topup_logs
-			WHERE user_id = ?
-			ORDER BY date_created DESC
-			LIMIT ? OFFSET ?
+		) AS unioned 
+		WHERE rfid_card_tag = ?
+		ORDER BY date_created DESC
+		LIMIT ? OFFSET ?
 		`;
 
 		return new Promise((resolve, reject) => {
-			mysql.query(QUERY, [userID, limit, offset], (err, result) => {
+			mysql.query(QUERY, [rfidCardTag, limit, offset], (err, result) => {
 				if (err) {
 					reject(err);
 				}
