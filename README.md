@@ -122,7 +122,7 @@ Verify or check the status of topup
 
 Retrieve user transactions
 
-**Authorization:** Basic TOKEN
+**Authorization:** Bearer TOKEN
 
 **Queries**
 
