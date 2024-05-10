@@ -179,7 +179,8 @@ module.exports = class TopupRepository {
 				payment_status, 
 				date_created
 			FROM topup_logs
-		) AS unioned 
+			WHERE payment_status IN ('paid', 'expired')
+			) AS transactions
 		WHERE rfid_card_tag = ?
 		ORDER BY date_created DESC
 		LIMIT ? OFFSET ?

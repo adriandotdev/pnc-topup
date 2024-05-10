@@ -472,8 +472,8 @@ module.exports = class TopupService {
 
 			const result = await this.#repository.GetTransactions(
 				rfidCardTag,
-				limit || 10,
-				offset || 0
+				parseInt(limit) || 10,
+				parseInt(offset) || 0
 			);
 
 			return result;
