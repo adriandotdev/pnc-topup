@@ -15,6 +15,14 @@ module.exports = class TopupService {
 		this.#repository = new TopupRepository();
 	}
 
+	/**
+	 * Requests authorization from the authentication module.
+	 *
+	 * This method sends a POST request to the authentication module's URL to obtain authorization.
+	 *
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the status and data of the request.
+	 * @throws {Error} Throws an error if there is any issue with the request.
+	 */
 	async #RequestAuthmodule() {
 		logger.info({
 			method: "RequestAuthmodule",
@@ -38,6 +46,19 @@ module.exports = class TopupService {
 		return { status: result.status, data: result.data };
 	}
 
+	/**
+	 * Requests to the GCash source URL.
+	 *
+	 * This method sends a POST request to the GCash source URL to initiate a top-up transaction.
+	 *
+	 * @param {Object} params - The parameters for the request.
+	 * @param {string} params.auth_token - The authentication token.
+	 * @param {string} params.user_id - The user ID.
+	 * @param {number} params.amount - The amount to top up.
+	 * @param {string} params.topup_id - The ID of the top-up transaction.
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the status and data of the request.
+	 * @throws {Error} Throws an error if there is any issue with the request.
+	 */
 	async #RequestToGCashSourceURL({ auth_token, user_id, amount, topup_id }) {
 		logger.info({
 			data: {
@@ -71,6 +92,19 @@ module.exports = class TopupService {
 		return { status: result.status, data: result.data.result.data };
 	}
 
+	/**
+	 * Requests to the Maya source URL.
+	 *
+	 * This method sends a POST request to the Maya source URL to initiate a payment transaction.
+	 *
+	 * @param {Object} params - The parameters for the request.
+	 * @param {string} params.auth_token - The authentication token.
+	 * @param {string} params.user_id - The user ID.
+	 * @param {string} params.description - The description of the transaction.
+	 * @param {number} params.amount - The amount of the transaction.
+	 * @returns {Promise<Object>} A promise that resolves to the data of the request.
+	 * @throws {Error} Throws an error if there is any issue with the request.
+	 */
 	async #RequestToMayaSourceURL({ auth_token, user_id, description, amount }) {
 		const result = await axios.post(
 			process.env.MAYA_PAYMENT_URL,
@@ -96,6 +130,19 @@ module.exports = class TopupService {
 		return result.data;
 	}
 
+	/**
+	 * Requests to the GCash payment URL.
+	 *
+	 * This method sends a POST request to the GCash payment URL to initiate a payment transaction.
+	 *
+	 * @param {Object} params - The parameters for the request.
+	 * @param {number} params.amount - The amount of the transaction.
+	 * @param {string} params.description - The description of the transaction.
+	 * @param {string} params.id - The ID of the transaction.
+	 * @param {string} params.token - The authentication token.
+	 * @returns {Promise<Object>} A promise that resolves to the data of the request.
+	 * @throws {Error} Throws an error if there is any issue with the request.
+	 */
 	async #RequestToGCashPaymentURL({ amount, description, id, token }) {
 		const result = await axios.post(
 			process.env.GCASH_PAYMENT_URL,
@@ -119,6 +166,19 @@ module.exports = class TopupService {
 		return result.data;
 	}
 
+	/**
+	 * Requests to the Maya payment URL.
+	 *
+	 * This method sends a POST request to the Maya payment URL to get the payment status of a transaction.
+	 * If the status of the transaction is "processing", it recursively calls itself until the status changes.
+	 *
+	 * @param {Object} params - The parameters for the request.
+	 * @param {string} params.token - The authentication token.
+	 * @param {string} params.transaction_id - The ID of the transaction.
+	 * @param {string} params.client_key - The client key.
+	 * @returns {Promise<string>} A promise that resolves to the status of the transaction.
+	 * @throws {Error} Throws an error if there is any issue with the request.
+	 */
 	async #RequestToMayaPaymentURL({ token, transaction_id, client_key }) {
 		const result = await axios.post(
 			process.env.MAYA_GET_PAYMENT_URL,
@@ -148,6 +208,23 @@ module.exports = class TopupService {
 		return status;
 	}
 
+	/**
+	 * Initiates a top-up transaction.
+	 *
+	 * This method performs a top-up transaction for a user with the specified amount and top-up type.
+	 * It first cleans the amount for top-up and checks if the top-up type is valid.
+	 * Then it requests authentication data from the authentication module.
+	 * If the authentication request is successful, it verifies the amount and initiates the top-up process accordingly.
+	 * For GCash top-ups, it calls the GCash source URL request function and updates the top-up status accordingly.
+	 * For Maya top-ups, it calls the Maya source URL request function and initiates the top-up process based on the response.
+	 *
+	 * @param {Object} params - The parameters for the top-up transaction.
+	 * @param {string} params.user_id - The ID of the user initiating the top-up.
+	 * @param {string} params.topup_type - The type of top-up (gcash, maya, or card).
+	 * @param {number} params.amount - The amount to be topped up.
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the checkout URL for initiating the top-up.
+	 * @throws {HttpBadRequest | HttpInternalServerError} Throws an error if there is any issue with the request or if the top-up type or amount is invalid.
+	 */
 	async Topup({ user_id, topup_type, amount }) {
 		function cleanAmountForTopup(amount) {
 			const numberStr = amount.toString();
@@ -295,7 +372,21 @@ module.exports = class TopupService {
 		}
 	}
 
-	// GCash Payment
+	/**
+	 * Initiates a GCash payment for a top-up transaction.
+	 *
+	 * This method performs a GCash payment for a specific top-up transaction using the provided token.
+	 * It first cleans the amount for top-up and retrieves details of the top-up transaction.
+	 * Then it validates the payment token and updates the top-up status accordingly.
+	 *
+	 * @param {Object} params - The parameters for the GCash payment.
+	 * @param {string} params.token - The token for the GCash payment.
+	 * @param {string} params.topup_id - The ID of the top-up transaction.
+	 * @param {boolean} params.payment_token_valid - Indicates whether the payment token is valid.
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the status of the top-up transaction.
+	 * @throws {HttpBadRequest} Throws an error if the top-up ID is not found, if the top-up has already been paid or failed,
+	 * or if there is an issue with the payment request.
+	 */
 	async GCashPayment({ token, topup_id, payment_token_valid }) {
 		logger.info({
 			PAYMENT_METHOD: {
@@ -405,6 +496,21 @@ module.exports = class TopupService {
 		};
 	}
 
+	/**
+	 * Initiates a Maya payment for a top-up transaction.
+	 *
+	 * This method performs a Maya payment for a specific top-up transaction using the provided token and transaction ID.
+	 * It first checks the validity of the payment token and retrieves details of the top-up transaction.
+	 * Then it updates the top-up status based on the Maya payment result.
+	 *
+	 * @param {Object} params - The parameters for the Maya payment.
+	 * @param {string} params.token - The token for the Maya payment.
+	 * @param {string} params.transaction_id - The ID of the top-up transaction.
+	 * @param {boolean} params.payment_token_valid - Indicates whether the payment token is valid.
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the status of the top-up transaction.
+	 * @throws {HttpBadRequest} Throws an error if the transaction ID is not found, if the top-up has already been paid or failed,
+	 * or if there is an issue with the Maya payment request.
+	 */
 	async MayaPayment({ token, transaction_id, payment_token_valid }) {
 		if (payment_token_valid) {
 			let details = await this.#repository.GetMayaTopupDetails(transaction_id);
@@ -443,6 +549,16 @@ module.exports = class TopupService {
 		}
 	}
 
+	/**
+	 * Verifies a payment transaction.
+	 *
+	 * This method verifies a payment transaction based on the provided transaction ID.
+	 * It retrieves the payment details from the repository and returns the result.
+	 *
+	 * @param {string} transactionID - The ID of the payment transaction to verify.
+	 * @returns {Promise<Object>} A promise that resolves to an object containing the details of the payment transaction.
+	 * @throws {HttpNotFound} Throws an error if the transaction ID is not found.
+	 */
 	async VerifyPayment(transactionID) {
 		try {
 			const result = await this.#repository.VerifyPayment(transactionID);
@@ -456,6 +572,18 @@ module.exports = class TopupService {
 		}
 	}
 
+	/**
+	 * Retrieves transactions associated with an RFID card tag.
+	 *
+	 * This method retrieves transactions associated with the provided RFID card tag.
+	 * It accepts optional parameters for limit and offset to paginate the results.
+	 *
+	 * @param {string} rfidCardTag - The RFID card tag for which transactions are to be retrieved.
+	 * @param {number} [limit=10] - The maximum number of transactions to retrieve (default: 10).
+	 * @param {number} [offset=0] - The offset for pagination (default: 0).
+	 * @returns {Promise<Array>} A promise that resolves to an array containing the transactions.
+	 * @throws {HttpBadRequest} Throws an error if limit or offset are not positive whole numbers.
+	 */
 	async GetTransactions(rfidCardTag, limit, offset) {
 		try {
 			if (typeof limit !== "number" || typeof offset !== "number")
