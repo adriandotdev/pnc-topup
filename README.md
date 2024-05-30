@@ -1,140 +1,94 @@
-# PNC Topup Service
+# Top-up API Documentation
 
-This service includes all of the topups for GCash, and Maya
+This document outlines the endpoints and usage of the Top-up API.
 
-## APIs
+## Authentication
 
-### `POST /api/v1/payments/topup`
-
-This API is for the initial topup transaction.
-
-**Authorization:** Bearer TOKEN
-
-**Request Body**
-
-```json
-"topup_type": ["gcash", "maya"], // either gcash or maya
-"amount": 100
-```
-
-> NOTE: amount must be minimum of 100
-
-**Response**
-
-The response includes the redirection url to process the payment.
-
-```json
-{
-	"status": 200,
-	"data": {
-		"checkout_url": "https://test-sources.paymongo.com/sources?id=src_JwZXkcfngyRdBMU72RfCH3D9"
-	},
-	"message": "Success"
-}
-```
+All endpoints require authentication using Access Token or Basic Token.
 
 ---
 
-### GCash Payment API - `GET /api/v1/payments/tenant/gcash/:token/:topup_id`
+## Endpoints
 
-GCash Payment API
+### 1. Top-up Payment API
 
-**Authorization:** Basic TOKEN
-
-**Parameters**
-
-- **token** - Token from the redirection url
-- **topup_id** - ID of topup
-
-**Response**
-
-```json
-{
-	"status": 200,
-	"data": {
-		"topup_status": "paid",
-		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
-	},
-	"message": "SUCCESS"
-}
-```
-
-> NOTE: Client should have a route following this URL path
-
-`https://v2-stg-parkncharge.sysnetph.com/gcashPayment/:token/:user_id/:topup_id/tenant`
+- **URL:** `/topup/api/v1/payments/topup`
+- **Method:** POST
+- **Authentication:** Access Token
+- **Request Body:**
+  - `topup_type` - Type of top-up (e.g., maya, gcash)
+  - `amount` - Amount to top-up
+- **Description:** Initiates a top-up payment transaction.
+- **Response:**
+  - `status` - HTTP status code
+  - `data` - Result data
+  - `message` - Success message
 
 ---
 
-### Maya Payment API - `GET /api/v1/payments/tenant/maya/:token/:transaction_id`
+### 2. GCash Payment Verification API
 
-Maya Payment API
-
-**Authorization:** Basic TOKEN
-
-**Parameters**
-
-- **token** - Token from the redirection url
-- **transaction_id** - Transaction ID from the redirection url
-
-**Response**
-
-```json
-{
-	"status": 200,
-	"data": {
-		"topup_status": "paid",
-		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
-	},
-	"message": "SUCCESS"
-}
-```
-
-> NOTE: Client should have a route following this URL path
-
-`https://v2-stg-parkncharge.sysnetph.com/mayaPayment/:token/:user_id/tenant/?payment_intent_id=<payment_intent_id>`
+- **URL:** `/topup/api/v1/payments/tenant/gcash/:token/:topup_id`
+- **Method:** GET
+- **Authentication:** Basic Token
+- **Parameters:**
+  - `:token` - GCash payment token
+  - `:topup_id` - Top-up ID
+- **Description:** Verifies GCash payment transaction.
+- **Response:**
+  - `status` - HTTP status code
+  - `data` - Result data
+  - `message` - Success message
 
 ---
 
-### Payment Verification - `GET /api/v1/payments/tenant/verify/:transaction_id`
+### 3. Maya Payment Verification API
 
-Verify or check the status of topup
-
-**Parameter**
-
-- **transaction_id** - Transaction ID of the topup
-
-**Response**
-
-```json
-{
-	"status": 200,
-	"data": {
-		"topup_status": "paid",
-		"transaction_id": "src_d9hWWG4oyuUcWaZnDyhcsdjU"
-	},
-	"message": "SUCCESS"
-}
-```
+- **URL:** `/topup/api/v1/payments/tenant/maya/:token/:transaction_id`
+- **Method:** GET
+- **Authentication:** Basic Token
+- **Parameters:**
+  - `:token` - Maya payment token
+  - `:transaction_id` - Transaction ID
+- **Description:** Verifies Maya payment transaction.
+- **Response:**
+  - `status` - HTTP status code
+  - `data` - Result data
+  - `message` - Success message
 
 ---
 
-### User's Transactions - `GET /api/v1/transactions?limit=10&offset=0`
+### 4. Payment Verification API
 
-Retrieve user transactions
+- **URL:** `/topup/api/v1/payments/tenant/verify/:transaction_id`
+- **Method:** GET
+- **Authentication:** Basic Token
+- **Parameters:**
+  - `:transaction_id` - Transaction ID
+- **Description:** Verifies payment transaction.
+- **Response:**
+  - `status` - HTTP status code
+  - `data` - Result data
+  - `message` - Success message
 
-**Authorization:** Bearer TOKEN
+---
 
-**Queries**
+### 5. Get Transactions API
 
-- **limit** - Number of objects to retrieved. Type of Number.
-- **offset** - Starting row to retrieved. Type of Number.
+- **URL:** `/topup/api/v1/transactions`
+- **Method:** GET
+- **Authentication:** Access Token
+- **Query Parameters:**
+  - `limit` - Limit the number of transactions (optional)
+  - `offset` - Offset for pagination (optional)
+- **Description:** Retrieves user transactions.
+- **Response:**
+  - `status` - HTTP status code
+  - `data` - Result data
+  - `message` - Success message
 
-**Response**
+---
 
-```json
-{
-	"status": 200,
-	"data": [],
-	"message": "SUCCESS"
-}
-```
+## Error Handling
+
+All endpoints are equipped with error handling middleware. If an error occurs, it will be logged, and an appropriate error response will be sent.
