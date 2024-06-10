@@ -87,6 +87,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
+				req.error_name = "TOPUP_API_ERROR";
 				next(err);
 			}
 		}
@@ -136,6 +137,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
+				req.error_name = "GCASH_PAYMENT_API_ERROR";
 				next(err);
 			}
 		}
@@ -183,6 +185,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
+				req.error_name = "MAYA_PAYMENT_API_ERROR";
 				next(err);
 			}
 		}
@@ -225,6 +228,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "SUCCESS" });
 			} catch (err) {
+				req.error_name = "PAYMENT_VERIFICATION_API_ERROR";
 				next(err);
 			}
 		}
@@ -266,6 +270,7 @@ module.exports = (app) => {
 					.status(200)
 					.json({ status: 200, data: result, message: "Success" });
 			} catch (err) {
+				req.error_name = "TRANSACTIONS_API_ERROR";
 				next(err);
 			}
 		}
@@ -274,6 +279,7 @@ module.exports = (app) => {
 	app.use((err, req, res, next) => {
 		logger.error({
 			API_REQUEST_ERROR: {
+				error_name: req.error_name || "UNKNOWN_ERROR",
 				message: err.message,
 				stack: err.stack.replace(/\\/g, "/"), // Include stack trace for debugging
 				request: {
