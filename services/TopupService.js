@@ -233,7 +233,14 @@ module.exports = class TopupService {
 
 			if (numberStr.includes(".")) {
 				const cleanedStr = numberStr.replace(".", "");
-				cleanedNumber = parseFloat(cleanedStr);
+				const numberAfterDecimal = numberStr.split(".")[1];
+
+				if (numberAfterDecimal[0] === "0")
+					cleanedNumber = parseFloat(cleanedStr);
+				else
+					cleanedNumber =
+						parseFloat(cleanedStr) +
+						(parseInt(numberAfterDecimal) <= 9 ? "0" : "");
 			} else {
 				cleanedNumber = parseInt((amount += "00"));
 			}
@@ -253,6 +260,7 @@ module.exports = class TopupService {
 
 		const authmoduleData = await this.#RequestAuthmodule();
 
+		console.log(modifiedAmountValueForPaymongo);
 		if (authmoduleData.status >= 400 && authmoduleData.status < 500) {
 			logger.info({
 				AUTHMODULE_API_ERROR: {
